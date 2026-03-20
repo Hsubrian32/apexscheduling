@@ -68,3 +68,13 @@ async function updateAppointmentRow(rowIndex, appt) {
     const row = SHEET_COLUMNS.map(col => appt[col] || '');
     await sheetsUpdate(`A${rowIndex}:T${rowIndex}`, [row]);
 }
+
+async function deleteAppointmentRow(rowIndex) {
+    const res = await fetch(APEX_CONFIG.APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+    });
+    if (!res.ok) throw new Error('Delete failed: ' + res.status);
+    return res.json();
+}
