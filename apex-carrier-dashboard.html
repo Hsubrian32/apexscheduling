@@ -84,6 +84,13 @@
         .apex-response { font-size: 11px; color: #555; }
         .apex-response .alt-date { color: #0073bb; font-weight: bold; }
 
+        .btn-export {
+            padding: 7px 16px; background: #232f3e; color: white; border: none;
+            border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-export:hover { background: #37475a; }
+
         /* Mobile responsive */
         @media (max-width: 768px) {
             .header { flex-direction: column; height: auto; padding: 10px 12px; gap: 8px; }
@@ -157,6 +164,9 @@
 
         <!-- ACTIVE TAB -->
         <div id="tab-active" class="tab-content active">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <button class="btn-export" onclick="exportCSV('active')">📥 Export CSV</button>
+            </div>
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -188,6 +198,9 @@
 
         <!-- PAST TAB -->
         <div id="tab-past" class="tab-content">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <button class="btn-export" onclick="exportCSV('past')">📥 Export CSV</button>
+            </div>
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -349,6 +362,46 @@
         async function loadData() {
             allAppts = await getAllAppointments();
             renderTable();
+        }
+
+        function exportCSV(type) {
+            const today = getTodayStr();
+            const source = type === 'active'
+                ? allAppts.filter(a => a.requestedDate >= today)
+                : allAppts.filter(a => a.requestedDate < today);
+
+            if (source.length === 0) {
+                alert('No data to export.');
+                return;
+            }
+
+            const headers = ['Appt ID','Facility','Container Number','Carrier SCAC','Carrier Name',
+                'Available for Pickup','Last Free Date','Requested Date','Start Time','End Time',
+                'Status','Apex Alternative Date','Alt Start','Alt End','Apex Comments','Submitted'];
+            const keys = ['id','facility','containerNumber','carrierScac','carrierName',
+                'availableDate','lastFreeDate','requestedDate','startTime','endTime',
+                'status','apexAlternativeDate','altStartTime','altEndTime','apexComments','submittedAt'];
+
+            const escapeCSV = (val) => {
+                const str = String(val || '');
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return '"' + str.replace(/"/g, '""') + '"';
+                }
+                return str;
+            };
+
+            let csv = headers.map(escapeCSV).join(',') + '\n';
+            source.forEach(a => {
+                csv += keys.map(k => escapeCSV(a[k])).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'apex-' + type + '-appointments-' + today + '.csv';
+            link.click();
+            URL.revokeObjectURL(url);
         }
 
         document.getElementById('searchInput').addEventListener('input', renderTable);
